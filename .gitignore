@@ -21,3 +21,4 @@ RESULTS/
 sge*
 travis_key
 *.pyc
+deps/*
