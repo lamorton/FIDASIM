@@ -228,16 +228,12 @@ def check_inputs(inputs):
     equilibrium_file = inputs['result_dir'] + ps + inputs['runid'] + '_equilibrium.h5'
     geometry_file = inputs['result_dir'] + ps + inputs['runid'] + '_geometry.h5'
     distribution_file = inputs['result_dir'] + ps + inputs['runid'] + '_distribution.h5'
-    neutrals_file = inputs['result_dir'] + ps + inputs['runid'] + '_neutrals.h5'
+    neutrals_file = inputs['result_dir'] + ps + inputs['neutrals_file']
 
     inputs['input_file'] = input_file
     inputs['equilibrium_file'] = equilibrium_file
     inputs['geometry_file'] = geometry_file
     inputs['distribution_file'] = distribution_file
-    inputs['load_neutrals'] = 0
-    inputs['flr'] = 2
-    inputs['seed'] = -1
-    inputs['verbose'] = 1
     inputs['neutrals_file'] = neutrals_file
 
     if err:
@@ -555,12 +551,13 @@ def check_plasma(inputs, grid, plasma):
               'vt': nrnznphi_double,
               'vz': nrnznphi_double,
               'dene': nrnznphi_double,
-              'denn': nrnznphi_double,
               'ti': nrnznphi_double,
               'te': nrnznphi_double,
               'zeff': nrnznphi_double,
               'mask': nrnznphi_int,
               'data_source': zero_string}
+    if inputs.get('calc_cold',0) == 1 or inputs.get('calc_pfida',0) ==1 or inputs.get('calc_pnpa',0)==1:
+        schema['denn']=nrnznphi_double
 
     err = check_dict_schema(schema, plasma, desc="plasma parameters")
     if err:
