@@ -209,7 +209,6 @@ def main():
 
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
-        ax.set_aspect('equal')
 
         # Define beam grid parameters
         if f90:
