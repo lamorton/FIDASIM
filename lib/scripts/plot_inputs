@@ -277,9 +277,10 @@ def main():
         xrmin = rmin*np.cos(th)
         yrmax = rmax*np.sin(th)
         yrmin = rmin*np.sin(th)
-        zr = 0.0*xrmax
-        ax.plot(xrmax,yrmax,zr,color='black')
-        ax.plot(xrmin,yrmin,zr,color='black')
+        ax.plot(xrmax,yrmax,zmax,color='black')
+        ax.plot(xrmax,yrmax,zmin,color='black')
+        ax.plot(xrmin,yrmin,zmax,color='black')
+        ax.plot(xrmin,yrmin,zmin,color='black')
 
         # Plot FIDA and NPA chords
         if 'npa' in geo:
@@ -312,16 +313,9 @@ def main():
                 ax.plot(los[:,0],los[:,1],los[:,2],color=colors[i+f_nchan],label = "NPA Ch. {0}".format(i+1))
 
         # Set axes limits for an equal aspect ratio visualization
-        X = np.array([-rmax,rmax])
-        Y = np.array([-rmax,rmax])
-        Z = np.array([-zmax,zmax])
-        max_range = np.array([X.max()-X.min(), Y.max()-Y.min(), Z.max()-Z.min()]).max() / 2.0
-        mid_x = (X.max()+X.min()) * 0.5
-        mid_y = (Y.max()+Y.min()) * 0.5
-        mid_z = (Z.max()+Z.min()) * 0.5
-        ax.set_xlim(mid_x - max_range, mid_x + max_range)
-        ax.set_ylim(mid_y - max_range, mid_y + max_range)
-        ax.set_zlim(mid_z - max_range, mid_z + max_range)
+        ax.set_xlim(-rmax,rmax)
+        ax.set_ylim(-rmax,rmax)
+        ax.set_zlim(zmin-1,zmax)
         ax.set_xlabel('X (cm)')
         ax.set_ylabel('Y (cm)')
         ax.set_zlabel('Z (cm)')
