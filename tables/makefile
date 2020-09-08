@@ -2,6 +2,8 @@ SHELL = /bin/bash
 
 EX = $(TABLES_DIR)/generate_tables$(EXEEXT)
 
+%.o : %.mod
+
 TBDEPS=$(SRC_DIR)/hdf5_utils.o $(SRC_DIR)/utilities.o
 TBDEPMODS=$(SRC_DIR)/hdf5_utils.mod $(SRC_DIR)/utilities.mod
 ifeq ($(USE_MPI),y)
