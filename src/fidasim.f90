@@ -6745,10 +6745,6 @@ subroutine circle_grid_intersect(r0, e1, e2, radius, beam_grid_phi_enter, beam_g
 
     beam_grid_phi_enter = 0.d0
     beam_grid_phi_exit = 0.d0
-    if (count(inter).gt.2) then
-        write(*,'("CIRCLE_GRID_INTERSECT: Circle intersects grid more than 2 times: ",i2)') count(inter)
-        return
-    endif
 
     if(any(inter)) then
         beam_grid_phi_enter = minval(phi,inter)
