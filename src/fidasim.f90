@@ -4578,6 +4578,93 @@ subroutine write_neutrals
 
 end subroutine write_neutrals
 
+
+subroutine write_cold_neutrals
+    !+ Writes cold neutrals to a HDF5 file
+    integer(HID_T) :: fid, gid
+    integer :: error
+
+    integer :: i
+    character(charlim) :: filename
+
+    filename=trim(adjustl(inputs%result_dir))//"/"//trim(adjustl(inputs%runid))//"_cold_neutrals.h5"
+
+    !Open HDF5 interface
+    call h5open_f(error)
+
+    !Create file overwriting any existing file
+    call h5fcreate_f(filename, H5F_ACC_TRUNC_F, fid, error)
+
+    !Write variables
+    
+    !call write_equilibrium_grid(fid, error)
+    if(inputs%calc_cold.ge.1) then
+        call h5gcreate_f(fid, "/cold", gid, error)
+        call write_cold_population(gid, error)
+        call h5gclose_f(gid, error)
+        call h5ltset_attribute_string_f(fid,"/cold","description", &
+                "Cold Neutral Population", error)
+    endif
+    !Close file
+    call h5fclose_f(fid, error)
+
+    !Close HDF5 interface
+    call h5close_f(error)
+
+    if(inputs%verbose.ge.1) then
+        write(*,'(T4,a,a)') 'cold neutral populations written to: ',trim(filename)
+    endif
+
+end subroutine write_cold_neutrals
+
+subroutine write_cold_neutral_population(id, error)
+    !+ Writes Cold Neutral Population to HDF5 group
+    integer(HID_T), intent(inout)       :: id
+        !+ HDF5 group ID
+    integer, intent(out)                :: error
+        !+ Error code
+
+    integer(HID_T) :: gid
+    integer(HSIZE_T), dimension(1) :: d
+    integer(HSIZE_T), dimension(5) :: dims5
+
+    real(Float64), dimension(:,:,:,:,:), allocatable :: neut
+    integer :: ic, iso, i, j, k, ind(3), nr, nphi, nz
+
+    nphi = inter_grid%nphi
+    nz = inter_grid%nz
+    nr = inter_grid%nr
+    d(1) =1
+    dims5 = [nlevs, n_thermal, nr, nphi, nz]
+    allocate(neut(nlevs, n_thermal, nr, nphi, nz))
+    n = 0
+    do ic=1,equil%ngrid
+        call ind2sub(inter_grid%dims,ic,ind)
+        i = ind(1) ; j = ind(2) ; k = ind(3)
+        do ilev=1,nlevs
+            do iso=1, n_thermal
+                neut(ilev,iso,i,j,k) = equil%plasma[i,j,k]%denn(ilev,iso)
+            enddo
+        enddo
+    enddo
+
+    call h5ltmake_dataset_int_f(id,"nlevel", 0, d, [nlevs], error)
+    call h5ltset_attribute_string_f(id,"nlevel","description", &
+         "Number of atomic energy levels", error)
+
+    call h5ltmake_dataset_int_f(id,"n_thermal", 0, d, [n_thermal], error)
+    call h5ltset_attribute_string_f(id,"n_thermal","description", &
+        "Number of hydrogen isotopes in thermal plasma", error)
+
+    call h5ltmake_compressed_dataset_double_f(id, "dens", 5, dims5, neut, error)
+    call h5ltset_attribute_string_f(id,"dens","units","neutrals*cm^-3",error)
+    call h5ltset_attribute_string_f(id,"dens","description", &
+         "Cold Neutral density dens(level,isotope,r,phi,z)", error)
+
+    deallocate(neut)
+
+end subroutine write_cold_neutral_population
+
 subroutine write_npa
     !+ Writes [[libfida:npa]] to a HDF5 file
     integer(HID_T) :: fid, gid
@@ -12451,6 +12538,7 @@ program fidasim
             write(*,*) 'cold:    ' ,time(time_start)
         endif
         call cold_spec()
+        call write_cold_neutrals()
         if(inputs%verbose.ge.1) write(*,'(30X,a)') ''
     endif
 
