@@ -187,7 +187,7 @@ clean_all: clean clean_deps clean_docs
 
 clean: clean_src clean_tables
 	-rm -f *.mod *.o fidasim
-
+	@cd $(DEPS_DIR); rm python
 clean_src:
 	@cd $(SRC_DIR); make clean
 
