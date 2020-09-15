@@ -4648,7 +4648,7 @@ subroutine write_cold_neutrals
     !call write_equilibrium_grid(fid, error)
     if(inputs%calc_cold.ge.1) then
         call h5gcreate_f(fid, "/cold", gid, error)
-        call write_cold_population(gid, error)
+        call write_cold_neutral_population(gid, error)
         call h5gclose_f(gid, error)
         call h5ltset_attribute_string_f(fid,"/cold","description", &
                 "Cold Neutral Population", error)
