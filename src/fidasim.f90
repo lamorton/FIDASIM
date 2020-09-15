@@ -4629,7 +4629,7 @@ subroutine write_cold_neutral_population(id, error)
     integer(HSIZE_T), dimension(5) :: dims5
 
     real(Float64), dimension(:,:,:,:,:), allocatable :: neut
-    integer :: ic, iso, i, j, k, ind(3), nr, nphi, nz
+    integer :: ic, iso,ilev, i, j, k, ind(3), nr, nphi, nz
 
     nphi = inter_grid%nphi
     nz = inter_grid%nz
@@ -4637,13 +4637,13 @@ subroutine write_cold_neutral_population(id, error)
     d(1) =1
     dims5 = [nlevs, n_thermal, nr, nphi, nz]
     allocate(neut(nlevs, n_thermal, nr, nphi, nz))
-    n = 0
-    do ic=1,equil%ngrid
+
+    do ic=1,inter_grid%ngrid
         call ind2sub(inter_grid%dims,ic,ind)
         i = ind(1) ; j = ind(2) ; k = ind(3)
         do ilev=1,nlevs
             do iso=1, n_thermal
-                neut(ilev,iso,i,j,k) = equil%plasma[i,j,k]%denn(ilev,iso)
+                neut(ilev,iso,i,j,k) = equil%plasma(i,j,k)%denn(ilev,iso)
             enddo
         enddo
     enddo
