@@ -4579,44 +4579,6 @@ subroutine write_neutrals
 end subroutine write_neutrals
 
 
-subroutine write_cold_neutrals
-    !+ Writes cold neutrals to a HDF5 file
-    integer(HID_T) :: fid, gid
-    integer :: error
-
-    integer :: i
-    character(charlim) :: filename
-
-    filename=trim(adjustl(inputs%result_dir))//"/"//trim(adjustl(inputs%runid))//"_cold_neutrals.h5"
-
-    !Open HDF5 interface
-    call h5open_f(error)
-
-    !Create file overwriting any existing file
-    call h5fcreate_f(filename, H5F_ACC_TRUNC_F, fid, error)
-
-    !Write variables
-    
-    !call write_equilibrium_grid(fid, error)
-    if(inputs%calc_cold.ge.1) then
-        call h5gcreate_f(fid, "/cold", gid, error)
-        call write_cold_population(gid, error)
-        call h5gclose_f(gid, error)
-        call h5ltset_attribute_string_f(fid,"/cold","description", &
-                "Cold Neutral Population", error)
-    endif
-    !Close file
-    call h5fclose_f(fid, error)
-
-    !Close HDF5 interface
-    call h5close_f(error)
-
-    if(inputs%verbose.ge.1) then
-        write(*,'(T4,a,a)') 'cold neutral populations written to: ',trim(filename)
-    endif
-
-end subroutine write_cold_neutrals
-
 subroutine write_cold_neutral_population(id, error)
     !+ Writes Cold Neutral Population to HDF5 group
     integer(HID_T), intent(inout)       :: id
@@ -4664,6 +4626,44 @@ subroutine write_cold_neutral_population(id, error)
     deallocate(neut)
 
 end subroutine write_cold_neutral_population
+
+subroutine write_cold_neutrals
+    !+ Writes cold neutrals to a HDF5 file
+    integer(HID_T) :: fid, gid
+    integer :: error
+
+    integer :: i
+    character(charlim) :: filename
+
+    filename=trim(adjustl(inputs%result_dir))//"/"//trim(adjustl(inputs%runid))//"_cold_neutrals.h5"
+
+    !Open HDF5 interface
+    call h5open_f(error)
+
+    !Create file overwriting any existing file
+    call h5fcreate_f(filename, H5F_ACC_TRUNC_F, fid, error)
+
+    !Write variables
+    
+    !call write_equilibrium_grid(fid, error)
+    if(inputs%calc_cold.ge.1) then
+        call h5gcreate_f(fid, "/cold", gid, error)
+        call write_cold_population(gid, error)
+        call h5gclose_f(gid, error)
+        call h5ltset_attribute_string_f(fid,"/cold","description", &
+                "Cold Neutral Population", error)
+    endif
+    !Close file
+    call h5fclose_f(fid, error)
+
+    !Close HDF5 interface
+    call h5close_f(error)
+
+    if(inputs%verbose.ge.1) then
+        write(*,'(T4,a,a)') 'cold neutral populations written to: ',trim(filename)
+    endif
+
+end subroutine write_cold_neutrals
 
 subroutine write_npa
     !+ Writes [[libfida:npa]] to a HDF5 file
