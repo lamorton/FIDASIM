@@ -579,6 +579,8 @@ def check_plasma(inputs, grid, plasma):
               'zeff': nrnznphi_double,
               'mask': nrnznphi_int,
               'data_source': zero_string}
+    if inputs.get('calc_cold',0) == 1 or inputs.get('calc_pfida',0) ==1 or inputs.get('calc_pnpa',0)==1:
+        schema['denn']=nrnznphi_double
 
     err = check_dict_schema(schema, plasma, desc="plasma parameters")
     if err:

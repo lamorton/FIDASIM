@@ -34,6 +34,40 @@ def get_arr_lim(arr):
     arr_max = np.max(arr)
     if arr_max<0: 
         arr_max = arr_max*0.9
+    print('Warning: f90nml library not found. Beam grid will NOT be plotted')
+
+# Define functions needed for beam grid transformations
+def tb_zyx(alpha, beta, gamma):
+    # Refer to utils.py for more documentation
+    sa = np.sin(alpha)
+    ca = np.cos(alpha)
+    sb = np.sin(beta)
+    cb = np.cos(beta)
+    sg = np.sin(gamma)
+    cg = np.cos(gamma)
+    r = np.zeros((3, 3))
+    r[0, 0] = ca * cb
+    r[0, 1] = ca * sb * sg - cg * sa
+    r[0, 2] = sa * sg + ca * cg * sb
+    r[1, 0] = cb * sa
+    r[1, 1] = ca * cg + sa * sb * sg
+    r[1, 2] = cg * sa * sb - ca * sg
+    r[2, 0] = -sb
+    r[2, 1] = cb * sg
+    r[2, 2] = cb * cg
+    return r
+def xyz_to_uvw(alpha, beta, gamma, xyz, origin = np.zeros(3)):
+    # Refer to utils.py for more documentation
+    xyz = np.array(xyz)
+    if xyz.ndim == 2:
+        s = xyz.shape
+        if s[0] != 3:
+            raise ValueError('xyz must be (3, n), but it has shape {}'.format(xyz.shape))
+        n = s[1]
+    elif xyz.ndim == 1:
+        if xyz.size != 3:
+            raise ValueError('xyz must have length 3, but it has length {}'.format(xyz.size))
+        n = 1
     else:
         arr_max = arr_max*1.1
     return arr_min, arr_max
@@ -300,14 +334,23 @@ def main():
                         [uvw_vertices[2],uvw_vertices[3],uvw_vertices[7],uvw_vertices[6]],
                         [uvw_vertices[5],uvw_vertices[1],uvw_vertices[3],uvw_vertices[7]],
                         [uvw_vertices[4],uvw_vertices[6],uvw_vertices[2],uvw_vertices[0]],]
-                ax.add_collection3d(Poly3DCollection(verts, facecolors='lime', linewidths=1, edgecolors='darkgreen',
-                                                     alpha=0.1))
+                # Plot sides
+                ax.add_collection3d(Poly3DCollection(verts, facecolors='lime', linewidths=1, edgecolors='darkgreen', alpha=0.1))
 
-        # Approximate plasma with a torus, where minor radius = max(max_length_R, max_length_Z)/2
-        # Find first and last nonzero index in R and Z
-        if axisym:
-            ir = [i for i,mr in enumerate(mask.sum(0)) if mr>0]
-            iz = [i for i,mz in enumerate(mask.sum(1)) if mz>0]
+        # Plot machine min/max major radius
+        th = np.linspace(0,2*np.pi,100)
+        xrmax = rmax*np.cos(th)
+        xrmin = rmin*np.cos(th)
+        yrmax = rmax*np.sin(th)
+        yrmin = rmin*np.sin(th)
+        ax.plot(xrmax,yrmax,zmax,color='black')
+        ax.plot(xrmax,yrmax,zmin,color='black')
+        ax.plot(xrmin,yrmin,zmax,color='black')
+        ax.plot(xrmin,yrmin,zmin,color='black')
+
+        # Plot FIDA and NPA chords
+        if 'npa' in geo:
+            n_nchan = geo['/npa/nchan'].value
         else:
             ir = [i for i,mr in enumerate(mask.sum((-1,0))) if mr>0]
             iz = [i for i,mz in enumerate(mask.sum((-1,1))) if mz>0]
@@ -356,20 +399,12 @@ def main():
                 ax.scatter(d_cent[0],d_cent[1],d_cent[2],color='k', s=1)
 
         # Set axes limits for an equal aspect ratio visualization
-        X = np.array([-(r_midpoint + 2*rho), r_midpoint + 2*rho])
-        Y = np.array([-(r_midpoint + 2*rho), r_midpoint + 2*rho])
-        Z = np.array([-zmax,zmax])
-        max_range = np.array([X.max()-X.min(), Y.max()-Y.min(), Z.max()-Z.min()]).max() / 2.0
-        mid_x = (X.max()+X.min()) * 0.5
-        mid_y = (Y.max()+Y.min()) * 0.5
-        mid_z = (Z.max()+Z.min()) * 0.5
-        ax.set_xlim(mid_x - max_range, mid_x + max_range)
-        ax.set_ylim(mid_y - max_range, mid_y + max_range)
-        ax.set_zlim(mid_z - max_range, mid_z + max_range)
-
-        ax.set_xlabel('X [cm]')
-        ax.set_ylabel('Y [cm]')
-        ax.set_zlabel('Z [cm]')
+        ax.set_xlim(-rmax,rmax)
+        ax.set_ylim(-rmax,rmax)
+        ax.set_zlim(zmin-1,zmax)
+        ax.set_xlabel('X (cm)')
+        ax.set_ylabel('Y (cm)')
+        ax.set_zlabel('Z (cm)')
         if n_nchan + f_nchan > 0 and args.legend:
             l = ax.legend(ncol=2,loc='upper left')
             for i, txt in enumerate(l.get_texts()):
