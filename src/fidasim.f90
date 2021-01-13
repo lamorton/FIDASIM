@@ -4250,6 +4250,56 @@ subroutine write_beam_grid(id, error)
 
 end subroutine write_beam_grid
 
+subroutine write_equilibrium_grid(id, error)
+    !+ Write [[libfida:equilibrium_grid]] to an HDF5 file
+    integer(HID_T), intent(inout) :: id
+        !+ HDF5 file ID
+    integer, intent(out)          :: error
+        !+ Error code
+
+    integer(HID_T) :: gid
+    integer(HSIZE_T), dimension(3) :: dims
+
+    !Create grid group
+    call h5gcreate_f(id, "grid", gid, error)
+
+    !Write variables
+    dims(1) = 1
+    call h5ltmake_dataset_int_f(gid,"nr", 0, dims(1:1), [inter_grid%nr], error)
+    call h5ltmake_dataset_int_f(gid,"nphi", 0, dims(1:1), [inter_grid%nphi], error)
+    call h5ltmake_dataset_int_f(gid,"nz", 0, dims(1:1), [inter_grid%nz], error)
+
+    dims = [inter_grid%nr, inter_grid%nphi, inter_grid%nz]
+    call h5ltmake_compressed_dataset_double_f(gid,"r", 1, dims(1:1), inter_grid%r, error)
+    call h5ltmake_compressed_dataset_double_f(gid,"phi", 1, dims(2:2), inter_grid%phi, error)
+    call h5ltmake_compressed_dataset_double_f(gid,"z", 1, dims(3:3), inter_grid%z, error)
+
+    !Write attributes
+    call h5ltset_attribute_string_f(gid,"nr","description", &
+         "Number of cells in the r direction", error)
+    call h5ltset_attribute_string_f(gid,"nphi","description", &
+         "Number of cells in the phi direction", error)
+    call h5ltset_attribute_string_f(gid,"nz","description", &
+         "Number of cells in the z direction", error)
+    call h5ltset_attribute_string_f(gid,"r","description", &
+         "r value of cell center in beam grid coordinates", error)
+    call h5ltset_attribute_string_f(gid,"r","units", "cm", error)
+    call h5ltset_attribute_string_f(gid,"phi","description", &
+         "phi value of cell center in beam grid coordinates", error)
+    call h5ltset_attribute_string_f(gid,"phi","units", "rad", error)
+    call h5ltset_attribute_string_f(gid,"z","description", &
+         "z value of cell center in beam grid coordinates", error)
+    call h5ltset_attribute_string_f(gid,"z","units", "cm", error)
+
+    call h5ltset_attribute_string_f(id,"grid","coordinate_system", &
+         "Right-handed cylindrical",error)
+
+    !Close grid group
+    call h5gclose_f(gid, error)
+
+end subroutine write_equilibrium_grid
+
+
 subroutine write_birth_profile
     !+ Writes [[libfida:birth]] to a HDF5 file
     integer(HID_T) :: fid
@@ -4589,6 +4639,93 @@ subroutine write_neutrals
     endif
 
 end subroutine write_neutrals
+
+
+subroutine write_cold_neutral_population(id, error)
+    !+ Writes Cold Neutral Population to HDF5 group
+    integer(HID_T), intent(inout)       :: id
+        !+ HDF5 group ID
+    integer, intent(out)                :: error
+        !+ Error code
+
+    integer(HID_T) :: gid
+    integer(HSIZE_T), dimension(1) :: d
+    integer(HSIZE_T), dimension(5) :: dims5
+
+    real(Float64), dimension(:,:,:,:,:), allocatable :: neut
+    integer :: ic, iso,ilev, i, j, k, ind(3), nr, nphi, nz
+
+    nphi = inter_grid%nphi
+    nz = inter_grid%nz
+    nr = inter_grid%nr
+    d(1) =1
+    dims5 = [nlevs, n_thermal, nr, nphi, nz]
+    allocate(neut(nlevs, n_thermal, nr, nphi, nz))
+
+    do ic=1,inter_grid%ngrid
+        call ind2sub(inter_grid%dims,ic,ind)
+        i = ind(1) ; j = ind(2) ; k = ind(3)
+        do ilev=1,nlevs
+            do iso=1, n_thermal
+                neut(ilev,iso,i,j,k) = equil%plasma(i,j,k)%denn(ilev,iso)
+            enddo
+        enddo
+    enddo
+
+    call h5ltmake_dataset_int_f(id,"nlevel", 0, d, [nlevs], error)
+    call h5ltset_attribute_string_f(id,"nlevel","description", &
+         "Number of atomic energy levels", error)
+
+    call h5ltmake_dataset_int_f(id,"n_thermal", 0, d, [n_thermal], error)
+    call h5ltset_attribute_string_f(id,"n_thermal","description", &
+        "Number of hydrogen isotopes in thermal plasma", error)
+
+    call h5ltmake_compressed_dataset_double_f(id, "dens", 5, dims5, neut, error)
+    call h5ltset_attribute_string_f(id,"dens","units","neutrals*cm^-3",error)
+    call h5ltset_attribute_string_f(id,"dens","description", &
+         "Cold Neutral density dens(level,isotope,r,phi,z)", error)
+
+    deallocate(neut)
+
+end subroutine write_cold_neutral_population
+
+subroutine write_cold_neutrals
+    !+ Writes cold neutrals to a HDF5 file
+    integer(HID_T) :: fid, gid
+    integer :: error
+
+    integer :: i
+    character(charlim) :: filename
+
+    filename=trim(adjustl(inputs%result_dir))//"/"//trim(adjustl(inputs%runid))//"_cold_neutrals.h5"
+
+    !Open HDF5 interface
+    call h5open_f(error)
+
+    !Create file overwriting any existing file
+    call h5fcreate_f(filename, H5F_ACC_TRUNC_F, fid, error)
+
+    !Write variables
+    
+    call write_equilibrium_grid(fid, error)
+    if(inputs%calc_cold.ge.1) then
+        call h5gcreate_f(fid, "/cold", gid, error)
+        call write_cold_neutral_population(gid, error)
+        call h5gclose_f(gid, error)
+        call h5ltset_attribute_string_f(fid,"/cold","description", &
+                "Cold Neutral Population", error)
+    endif
+    !Close file
+    call h5fclose_f(fid, error)
+
+    !Close HDF5 interface
+    call h5close_f(error)
+
+    if(inputs%verbose.ge.1) then
+        write(*,'(T4,a,a)') 'cold neutral populations written to: ',trim(filename)
+    endif
+
+end subroutine write_cold_neutrals
 
 subroutine write_npa
     !+ Writes [[libfida:npa]] to a HDF5 file
@@ -12475,6 +12612,7 @@ program fidasim
             write(*,*) 'cold:    ' ,time(time_start)
         endif
         call cold_spec()
+        call write_cold_neutrals()
         if(inputs%verbose.ge.1) write(*,'(30X,a)') ''
     endif
 
